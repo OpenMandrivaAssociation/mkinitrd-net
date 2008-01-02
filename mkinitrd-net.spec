@@ -40,6 +40,7 @@ Patch21: mkinitrd-net-config.patch
 License: GPL/LGPL/MPL
 Group: System/Kernel and hardware
 URL: http://www.fensystems.co.uk/SRPMS.fensys
+BuildRoot: %{_tmppath}/%{name}-buildroot
 Requires: tftp-server binutils
 BuildRequires: kernel-source
 BuildRequires: glibc-static-devel
