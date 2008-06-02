@@ -95,7 +95,7 @@ make LIBDIR=%{_libdir}/mknbi
 
 %install
 rm -rf $RPM_BUILD_ROOT
-%makeinstall tftpbootdir=$RPM_BUILD_ROOT%{_localstatedir}/tftpboot
+%makeinstall tftpbootdir=$RPM_BUILD_ROOT%{_localstatedir}/lib/tftpboot
 touch $RPM_BUILD_ROOT%{_sysconfdir}/dhcpd.conf.etherboot-pcimap.include
 
 %clean
