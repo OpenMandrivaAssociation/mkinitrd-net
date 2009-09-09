@@ -1,6 +1,6 @@
 %define name mkinitrd-net
 %define version 1.10
-%define release %mkrel 33
+%define release %mkrel 34
 %define uclibcver 0.9.28
 %define busyboxver 1.01
 
