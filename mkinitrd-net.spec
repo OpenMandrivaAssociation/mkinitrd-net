@@ -44,6 +44,7 @@ URL: http://www.fensystems.co.uk/SRPMS.fensys
 BuildRoot: %{_tmppath}/%{name}-buildroot
 Requires: tftp-server binutils
 BuildRequires: glibc-static-devel
+BuildRequires: kernel-source-latest
 Obsoletes: mknbi
 Provides: mknbi
 ExclusiveArch: %{ix86} ppc
