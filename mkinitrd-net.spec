@@ -1,6 +1,6 @@
 %define name mkinitrd-net
 %define version 1.10
-%define release %mkrel 34
+%define release %mkrel 32
 %define uclibcver 0.9.28
 %define busyboxver 1.01
 
@@ -36,13 +36,13 @@ Patch18: mkinitrd-net-unionfs.patch
 Patch19: mkinitrd-net-pegasus.patch
 Patch20: mkinitrd-net-userargs.patch
 Patch21: mkinitrd-net-config.patch
+Patch22: mkinitrd-net-fix-uclibc-build-with-system-headers.patch
 
 License: GPL/LGPL/MPL
 Group: System/Kernel and hardware
 URL: http://www.fensystems.co.uk/SRPMS.fensys
 BuildRoot: %{_tmppath}/%{name}-buildroot
 Requires: tftp-server binutils
-BuildRequires: kernel-source
 BuildRequires: glibc-static-devel
 Obsoletes: mknbi
 Provides: mknbi
@@ -82,6 +82,7 @@ projects.
 %patch19 -p1 -b .pegasus
 %patch20 -p1 -b .userargs
 %patch21 -p1 -b .config
+%patch22 -p1 -b .fix-uclibc-build-with-system-headers
 
 cp %{SOURCE5} uClibc-%{uclibcver}/.config
 cp %{SOURCE6} busybox-%{busyboxver}/.config
