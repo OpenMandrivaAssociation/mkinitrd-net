@@ -90,7 +90,7 @@ cp %{SOURCE6} busybox-%{busyboxver}/.config
 %ifarch ppc
 %patch0 -p1 -b .ppc
 %endif
-perl -pi -e "s|fill_from_spec_file_with_perl|$RPM_BUILD_DIR/initrd/uClibc|" uClibc-%{uclibcver}/.config
+perl -pi -e "s|fill_from_spec_file_with_perl|%{_builddir}/initrd/uClibc|" uClibc-%{uclibcver}/.config
 
 %build
 make LIBDIR=%{_libdir}/mknbi
