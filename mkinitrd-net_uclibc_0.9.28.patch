@@ -1,0 +1,21 @@
+--- initrd/Makefile.uclibc	2002-06-05 11:00:28.000000000 -0400
++++ initrd/Makefile	2004-07-21 12:57:05.461910232 -0400
+@@ -1,4 +1,4 @@
+-UCLIBC_VERSION = 0.9.11
++UCLIBC_VERSION = 0.9.28
+ UCLIBC = uClibc-$(UCLIBC_VERSION)
+ $(UCLIBC)_SOURCE = http://www.uclibc.org/downloads/$(UCLIBC).tar.bz2
+ UCLIBC_INSTALL = $(CURDIR)/uClibc
+@@ -63,6 +63,12 @@
+ 		$(UCLIBC)/extra/Configs/Config.i386 > $(UCLIBC)/Config
+ 	# Stripping out spurious CVS directories (screws up local cvs update)
+ 	rm -rf `find $(UCLIBC) -name CVS`
++	$(MAKE) -C $(UCLIBC) defconfig
++	perl -pi -e 's/^(INCLUDE_RPC).*/$$1 = true/ ;' \
++		-e 's{^(DEVEL_PREFIX).*}{$$1 = $(UCLIBC_INSTALL)} ;' \
++		-e 's{^(SHARED_LIB_LOADER_PATH).*}{$$1 = /lib} ;' \
++		-e 's{^RUNTIME_PREFIX="}{RUNTIME_PREFIX="\$$\(DEVEL_PREFIX\)} ;' \
++		$(UCLIBC)/.config
+ 	$(MAKE) -C $(UCLIBC)
+ 	install -m 644 $(UCLIBC)/COPYING.LIB COPYING.uClibc
+ 

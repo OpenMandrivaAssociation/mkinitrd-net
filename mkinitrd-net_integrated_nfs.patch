@@ -1,0 +1,19 @@
+--- initrd/mkinitrd-net.nfs	2002-07-26 10:19:37.000000000 +0200
++++ initrd/mkinitrd-net	2004-09-02 21:24:31.921082967 +0200
+@@ -84,8 +84,14 @@
+ # Build list of requested modules
+ modules="$*"
+ requested_modules="$modules"
+-modules="$modules nfs" # Always require nfs for nfs mount
+-modules="$modules af_packet" # Always require af_packet for udhcpc
++# seems we've moved nfs into the kernel now
++if [ -d "/lib/modules/$kernel_ver/kernel/fs/nfs" ]; then
++  modules="$modules sunrpc lockd nfs" # Always require nfs for nfs mount
++fi
++# seems we've moved af_packet into the kernel now                            
++if [ -d "/lib/modules/$kernel_ver/kernel/net/packet" ]; then 
++  modules="$modules af_packet" # Always require af_packet for udhcpc
++fi
+ 
+ # --help => Print help message
+ if [ "$do_help" == "y" ]; then

@@ -1,0 +1,94 @@
+--- initrd/mknbi-1.4.3/Makefile.ppc	2003-12-03 23:09:42.000000000 -0500
++++ initrd/mknbi-1.4.3/Makefile	2004-09-13 12:57:37.124784192 -0400
+@@ -18,7 +18,6 @@
+ FIRSTRELOCS=	0x92800 0x82800
+ OLDGAS:=	$(shell $(AS) --version | grep -q '2\.9\.1' && echo -DGAS291)
+ CFLAGS=		-I. -Os -ffreestanding -fstrength-reduce -fomit-frame-pointer \
+-		-mcpu=i386 \
+ 		-Wall -W -Wno-format -Wno-unused -DVERSION=\"$(VERSION)$(EXTRAVERSION)\"
+ LDBINARYFLAG=	--oformat binary
+ FIRST32SIZE=	6144
+@@ -59,7 +58,7 @@
+ DOCS=	$(MANS) $(HTMLS)
+ 
+ 
+-all:	$(PROG) $(FIRSTS) $(RMRD) $(DOCS)
++all:	$(PROG) $(RMRD) $(DOCS)
+ 
+ # Tagged image builder
+ mknbi:	mknbi.pl Nbi.pm TruncFD.pm
+--- initrd/busybox-1.00-rc3/Rules.mak.ppc	2004-09-13 13:14:57.286655552 -0400
++++ initrd/busybox-1.00-rc3/Rules.mak	2004-09-13 13:15:36.551686360 -0400
+@@ -35,7 +35,7 @@
+ # by asking the CC compiler what arch it compiles things for, so unless
+ # your compiler is broken, you should not need to specify TARGET_ARCH
+ CROSS           =$(subst ",, $(strip $(CROSS_COMPILER_PREFIX)))
+-CROSS          =../uClibc/bin/i386-uclibc-
++CROSS          =../uClibc/bin/powerpc-uclibc-
+ CC             = $(CROSS)gcc
+ AR             = $(CROSS)ar
+ AS             = $(CROSS)as
+@@ -89,7 +89,7 @@
+ export VERSION BUILDTIME TOPDIR HOSTCC HOSTCFLAGS CROSS CC AR AS LD NM STRIP CPP
+ ifeq ($(strip $(TARGET_ARCH)),)
+ TARGET_ARCH=$(shell $(CC) -dumpmachine | sed -e s'/-.*//' \
+-		-e 's/i.86/i386/' \
++		-e 's/i.86/I386/' \
+ 		-e 's/sparc.*/sparc/' \
+ 		-e 's/arm.*/arm/g' \
+ 		-e 's/m68k.*/m68k/' \
+--- initrd/uClibc-0.9.26/.config.ppc	2004-09-13 12:57:37.084790272 -0400
++++ initrd/uClibc-0.9.26/.config	2004-09-13 12:57:52.386464064 -0400
+@@ -6,12 +6,12 @@
+ # TARGET_cris is not set
+ # TARGET_e1 is not set
+ # TARGET_h8300 is not set
+-TARGET_i386=y
++# TARGET_i386 is not set
+ # TARGET_i960 is not set
+ # TARGET_m68k is not set
+ # TARGET_microblaze is not set
+ # TARGET_mips is not set
+-# TARGET_powerpc is not set
++TARGET_powerpc=y
+ # TARGET_sh is not set
+ # TARGET_sparc is not set
+ # TARGET_v850 is not set
+@@ -20,23 +20,9 @@
+ # Target Architecture Features and Options
+ #
+ HAVE_ELF=y
+-TARGET_ARCH="i386"
+-CONFIG_GENERIC_386=y
+-# CONFIG_386 is not set
+-# CONFIG_486 is not set
+-# CONFIG_586 is not set
+-# CONFIG_586MMX is not set
+-# CONFIG_686 is not set
+-# CONFIG_PENTIUMIII is not set
+-# CONFIG_PENTIUM4 is not set
+-# CONFIG_K6 is not set
+-# CONFIG_K7 is not set
+-# CONFIG_CRUSOE is not set
+-# CONFIG_WINCHIPC6 is not set
+-# CONFIG_WINCHIP2 is not set
+-# CONFIG_CYRIXIII is not set
+-ARCH_LITTLE_ENDIAN=y
+-# ARCH_BIG_ENDIAN is not set
++TARGET_ARCH="powerpc"
++# ARCH_LITTLE_ENDIAN is not set
++ARCH_BIG_ENDIAN=y
+ # ARCH_HAS_NO_MMU is not set
+ UCLIBC_HAS_MMU=y
+ UCLIBC_HAS_FLOATS=y
+--- initrd/uClibc-0.9.26/extra/Configs/Config.in.ppc	2004-01-02 18:34:12.000000000 -0500
++++ initrd/uClibc-0.9.26/extra/Configs/Config.in	2004-09-13 12:57:37.131783128 -0400
+@@ -7,7 +7,7 @@
+ 
+ choice
+ 	prompt "Target Architecture"
+-	default TARGET_i386
++	default TARGET_powerpc
+ 	help
+ 	  Stuff
+ 

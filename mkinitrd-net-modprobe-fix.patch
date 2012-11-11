@@ -1,0 +1,17 @@
+--- ./include-modules.ne2k-pci	2005-03-11 16:03:26.102428736 -0500
++++ ./include-modules	2005-03-11 16:09:38.915752496 -0500
+@@ -32,7 +32,13 @@
+ my @modules_dups;
+ my @module_list;
+ foreach my $module ( @requested_modules ) {
+-  @module_list = map { /^\S+\s+(.*)$/ ; $1 } `/sbin/modprobe -nva $module | grep ^insmod`;
++  # found that modprobe -nva doesn't return the dependencies 
++  # if the module is in use on the host machine
++  if ($current_kernel_ver =~ /^2.4/) {
++    @module_list = map { /^\S+\s+(.*)$/ ; $1 } `/sbin/modprobe -nva $module | grep ^insmod`;
++  } else {
++    @module_list = map { /^\S+\s+(.*)$/ ; $1 } `/sbin/modprobe --show-depends $module | grep ^insmod`;
++  }	  
+   # some modules (like af_packet), don't respond to -nva under 2.6 kernel
+   # some modules also have name mismatches between 2.4 and 2.6 kernels
+   # try to grab it with find, although we may have issues with dependencies

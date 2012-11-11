@@ -1,0 +1,20 @@
+--- include-modules.orig	2005-11-18 14:03:21.000000000 +0000
++++ include-modules	2005-11-18 14:51:54.000000000 +0000
+@@ -10,7 +10,7 @@
+ # Parse command line arguments
+ my @requested_modules = ();
+ my $target_dir = "";
+-my $kernel_ver;
++my $kernel_ver = `uname -r`;
+ my $quiet;
+ chomp ( my $current_kernel_ver = `uname -r` );
+ while ( $_ = shift ) {
+@@ -37,7 +37,7 @@
+   if ($current_kernel_ver =~ /^2.4/) {
+     @module_list = map { /^\S+\s+(.*)$/ ; $1 } `/sbin/modprobe -nva $module | grep ^insmod`;
+   } else {
+-    @module_list = map { /^\S+\s+(.*)$/ ; $1 } `/sbin/modprobe --show-depends $module | grep ^insmod`;
++    @module_list = map { /^\S+\s+(.*)$/ ; $1 } `/sbin/modprobe --set-version $kernel_ver --show-depends $module | grep ^insmod`;
+   }	  
+   # some modules (like af_packet), don't respond to -nva under 2.6 kernel
+   # some modules also have name mismatches between 2.4 and 2.6 kernels

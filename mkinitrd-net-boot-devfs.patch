@@ -1,0 +1,11 @@
+--- initrd/mknbi-set.devfs	2004-02-03 00:55:15.629110601 +0100
++++ initrd/mknbi-set	2004-02-03 00:56:09.716927602 +0100
+@@ -79,7 +79,7 @@
+ 
+ my $conffile = '/etc/mknbi-set.conf';
+ my $mkinitrd_net = 'mkinitrd-net';
+-my $mknbi = 'mknbi-linux';
++my $mknbi = 'mknbi-linux --append=devfs=mount';
+ my $output_dir = '/var/lib/tftpboot';
+ my $dhcpfile = '/etc/dhcpd.conf.etherboot-pcimap.include';
+ my $use_local;

@@ -1,0 +1,35 @@
+--- initrd/include-modules.pegasus	2005-12-21 12:22:40.000000000 +0100
++++ initrd/include-modules	2005-12-21 12:27:52.000000000 +0100
+@@ -13,11 +13,21 @@
+ my $kernel_ver = `uname -r`;
+ my $quiet;
+ chomp ( my $current_kernel_ver = `uname -r` );
++# for pegasus (maybe others)
++my @usb = ();
++if ($current_kernel_ver =~ /^2.4/) {
++  push @usb, ("usb-ohci", "usb-uhci");
++} else {
++  push @usb, ("ohci-hcd", "uhci-hcd");
++}    
+ while ( $_ = shift ) {
+   if    ( /-d/ ) { $target_dir = shift }
+   elsif ( /-k/ ) { $kernel_ver = shift }
+   elsif ( /-q/ ) { $quiet = 1 }
+-  else           { push @requested_modules, $_ };
++  else  {
++    push @requested_modules, @usb if $_ =~ /pegasus/; 
++    push @requested_modules, $_ 
++  };
+ }
+ 
+ # Create target directory if required
+@@ -84,6 +94,9 @@
+       system ("gunzip -c $module > $basename.ko");
+       # Print insmod line to stdout
+       print "insmod /lib/modules/$kernel_ver/$basename.ko\n";
++      if ($basename =~ /pegasus/) {
++        print "sleep 5\n";
++      }
+     } else {
+       system ("gunzip -c $module > $basename.o");
+       # Print insmod line to stdout

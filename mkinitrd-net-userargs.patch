@@ -1,0 +1,50 @@
+--- initrd/mknbi-set.userargs	2005-12-21 21:25:21.000000000 +0100
++++ initrd/mknbi-set	2005-12-21 21:25:26.000000000 +0100
+@@ -84,10 +84,11 @@
+ my $conffile = '/etc/mknbi-set.conf';
+ my $mkinitrd_net = 'mkinitrd-net';
+ my $mknbi = 'mknbi-linux';
++our $append = '';
+ if (`/sbin/pidof -s devfsd` gt 0) {
+-   $mknbi .= ' --append=devfs=mount';
++   $append .= 'devfs=mount ';
+ } else {
+-   $mknbi .= ' --append=devfs=nomount';
++   $append .= 'devfs=nomount ';
+ }
+ my $output_dir = '/var/lib/tftpboot';
+ my $dhcpfile = '/etc/dhcpd.conf.etherboot-pcimap.include';
+@@ -100,7 +101,7 @@
+ my $unionfs = '';
+ our $module_count = 0;
+ 
+-my $usage="Usage: $0 [-l|--local] [-q] [-v] [-u|--unionfs] [[-r|--refresh module[,module...]] [--help]";
++my $usage="Usage: $0 [-l|--local] [-q] [-v] [-a|--append 'args'] [-u|--unionfs] [[-r|--refresh module[,module...]] [--help]";
+ 
+ # Parse command-line options
+ while ( $_ = shift ) {
+@@ -116,12 +117,15 @@
+     $modulesets->{$moduleset} = 1;
+   } elsif ( /-k|--kernel/ ) {
+     $kernel = shift;
++  } elsif ( /-a|--append/ ) {
++    $append .= shift;
+   } elsif ( /-v|--verbose/ ) {
+     $verbosity++;
+   } elsif ( /-q|--quiet/ ) {
+     $verbosity--;
+   } elsif ( /--help/ ) {
+     die "$usage\n".
++	"  -a, --append    Append extra kernel arguments (use '')\n".
+ 	"  -c, --count    Count NBIs for a particular kernel\n".
+ 	"  -k, --kernel   Build NBIs for a particular kernel\n".
+         "  -l, --local    Run locally from CVS (for developers only)\n".
+@@ -139,6 +143,8 @@
+   }
+ }
+ 
++$mknbi .= " --append='" . $append . "'";
++
+ # Get set of current kernels
+ if ($kernel) {
+   @kernels = ( $kernel );

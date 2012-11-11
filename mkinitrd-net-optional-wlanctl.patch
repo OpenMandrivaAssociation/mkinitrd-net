@@ -1,0 +1,14 @@
+--- initrd/mkinitrd-net.wlan	2004-09-02 21:37:38.065774451 +0200
++++ initrd/mkinitrd-net	2004-09-02 21:57:36.202345815 +0200
+@@ -135,6 +135,11 @@
+ $include_modules $quiet -k $kernel_ver -d $initrd/lib/modules/$kernel_ver $modules > $initrd/bin/insert-modules || exit 1
+ chmod 755 $initrd/bin/insert-modules
+ 
++# dump wlanctl if we don't need it
++if ! `echo $modules | grep -q prism2 > /dev/null`; then
++  rm -f $initrd/bin/wlanctl
++fi
++	
+ # Create empty ext2fs image file
+ dd if=/dev/zero bs=1k of=$initrdimg count=$((`du -sk $initrd | cut -f1` * 7 / 6)) 2> /dev/null
+ /sbin/mke2fs -q -F $initrdimg 2> /dev/null

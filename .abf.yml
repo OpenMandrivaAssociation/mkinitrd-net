@@ -1,0 +1,8 @@
+sources:
+  "busybox-1.01.config:"	17159c0c848d100d16f21fd845a68c50fe7eeb0b
+  "busybox-1.01.tar.bz2:"	12b6e04e7e9e91c9aa0729c0748bb68789d71c26
+  "linux-wlan-ng-0.1.13.tar.bz2:"	89da8c0f33597f2236a732dc7e9c6dc8c0b4bf77
+  "mkinitrd-net-1.10.tar.bz2:"	eb8015aac7c956ab14e4127026ae5d9fbd436faf
+  "mknbi-1.4.3.tar.bz2:"	67c95a711d12837e4bfcbaa7d547193884bdfef8
+  "uClibc-0.9.28.config:"	5c4aaddba6f3d3495505e822e449eb070ec5434b
+  "uClibc-0.9.28.tar.bz2:"	9124a6e5b0454da3f967725d54fde806189ad27b

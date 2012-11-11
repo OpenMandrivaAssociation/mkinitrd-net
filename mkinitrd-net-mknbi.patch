@@ -1,0 +1,11 @@
+--- initrd/Makefile.mknbi	2004-09-02 22:38:09.885051402 +0200
++++ initrd/Makefile	2004-09-02 22:38:28.389208397 +0200
+@@ -11,7 +11,7 @@
+ LINUX_WLAN = linux-wlan-ng-$(LINUX_WLAN_VERSION)
+ $(LINUX_WLAN)_SOURCE = ftp://ftp.linux-wlan.org/pub/linux-wlan-ng/$(LINUX_WLAN).tar.gz
+ 
+-MKNBI_VERSION = 1.2
++MKNBI_VERSION = 1.4.3
+ MKNBI = mknbi-$(MKNBI_VERSION)
+ $(MKNBI)_SOURCE = http://belnet.dl.sourceforge.net/sourceforge/etherboot/$(MKNBI).tar.gz
+ 

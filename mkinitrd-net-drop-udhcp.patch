@@ -1,0 +1,108 @@
+--- initrd/Makefile.udhcp	2004-09-02 20:51:48.727840143 +0200
++++ initrd/Makefile	2004-09-02 20:56:45.816479544 +0200
+@@ -3,11 +3,7 @@
+ $(UCLIBC)_SOURCE = http://www.uclibc.org/downloads/$(UCLIBC).tar.bz2
+ UCLIBC_INSTALL = $(CURDIR)/uClibc
+ 
+-UDHCP_VERSION = 0.9.7
+-UDHCP = udhcp-$(UDHCP_VERSION)
+-$(UDHCP)_SOURCE = http://udhcp.busybox.net/source/$(UDHCP).tar.gz
+-
+-BUSYBOX_VERSION = 0.60.3
++BUSYBOX_VERSION = 1.01
+ BUSYBOX = busybox-$(BUSYBOX_VERSION)
+ $(BUSYBOX)_SOURCE = http://www.busybox.net/downloads/$(BUSYBOX).tar.bz2
+ 
+@@ -19,9 +15,9 @@
+ MKNBI = mknbi-$(MKNBI_VERSION)
+ $(MKNBI)_SOURCE = http://belnet.dl.sourceforge.net/sourceforge/etherboot/$(MKNBI).tar.gz
+ 
+-export PATH := $(UCLIBC_INSTALL)/bin:$(PATH)
++#export PATH := $(UCLIBC_INSTALL)/bin:$(PATH)
+ 
+-all : utils initrd-skel mknbi mknbi-linux
++all : $(UCLIBC) utils initrd-skel mknbi mknbi-linux
+ 	# Run "make tftpboot/initrd-kernel_module.img" to generate a suitable initrd
+ 	# Run "make tftpboot/boot-kernel_module.nbi" to generate a suitable NBI
+ 	# Run "make all-nbi" to generate a complete set of NBIs
+@@ -30,7 +26,7 @@
+ 	[ -d $* ] || wget $($*_SOURCE)
+ 	[ -f $*.t*gz ] && ( gunzip $*.t*gz ; bzip2 -9 $*.tar ) || true
+ 
+-UTILS = udhcpc busybox wlanctl
++UTILS = busybox wlanctl
+ 
+ utils : $(UTILS)
+ 
+@@ -51,51 +47,21 @@
+ 
+ .PHONY : all utils clean partlyclean
+ 
+-uClibc : $(UCLIBC)
+-	rm -rf $@
+-	$(MAKE) -C $(UCLIBC) install
+-
+ $(UCLIBC) : $(UCLIBC).tar.bz2
+ 	[ -d $@ ] || tar xvjf $<
+-	[ -f $(UCLIBC)/Config ] || perl -pe 's/^(INCLUDE_RPC).*/$$1 = true/ ;' \
+-		-e 's{^(DEVEL_PREFIX).*}{$$1 = $(UCLIBC_INSTALL)} ;' \
+-		-e 's{^(SHARED_LIB_LOADER_PATH).*}{$$1 = /lib} ;' \
+-		$(UCLIBC)/extra/Configs/Config.i386 > $(UCLIBC)/Config
+ 	# Stripping out spurious CVS directories (screws up local cvs update)
+ 	rm -rf `find $(UCLIBC) -name CVS`
+-	$(MAKE) -C $(UCLIBC) defconfig
+-	perl -pi -e 's/^(INCLUDE_RPC).*/$$1 = true/ ;' \
+-		-e 's{^(DEVEL_PREFIX).*}{$$1 = $(UCLIBC_INSTALL)} ;' \
+-		-e 's{^(SHARED_LIB_LOADER_PATH).*}{$$1 = /lib} ;' \
+-		-e 's{^RUNTIME_PREFIX="}{RUNTIME_PREFIX="\$$\(DEVEL_PREFIX\)} ;' \
+-		$(UCLIBC)/.config
+ 	$(MAKE) -C $(UCLIBC)
+ 	install -m 644 $(UCLIBC)/COPYING.LIB COPYING.uClibc
+ 
+-udhcpc : $(UDHCP)
+-	install -m 755 -s $(UDHCP)/$@ $@
+-
+-$(UDHCP) : $(UDHCP).tar.bz2 uClibc
+-	[ -d $@ ] || tar xvjf $<
+-	if [ ! -f $@/.script.c.patch ]; then \
+-		patch -d $@ -b -z .orig < script.c.patch ; \
+-		touch $@/.script.c.patch ; \
+-	fi
+-	$(MAKE) LDFLAGS+=-static -C $(UDHCP)
+-	install -m 644 $(UDHCP)/AUTHORS AUTHORS.udhcpc
+-	install -m 644 $(UDHCP)/COPYING COPYING.udhcpc
+-
+ busybox : $(BUSYBOX)
+ 	install -m 755 -s $(BUSYBOX)/$@ $@
+ 
+-$(BUSYBOX) : $(BUSYBOX).tar.bz2 uClibc
++$(BUSYBOX) : $(BUSYBOX).tar.bz2
+ 	[ -d $@ ] || tar xvjf $<
+-	perl -pi.orig -e \
+-	  's/^.*(#define BB_(FEATURE_NFSMOUNT|INSMOD|PIVOT_ROOT|IFCONFIG|ROUTE)).*/$$1/' \
+-	  $(BUSYBOX)/Config.h
+-	perl -pi.orig -e \
+-	  's/^(DOSTATIC).*$$/$$1 = true/' \
+-	  $(BUSYBOX)/Makefile
++	rm -rf uClibc
++	$(MAKE) -C $(UCLIBC) install
++	$(MAKE) -C $(BUSYBOX) dep
+ 	$(MAKE) -C $(BUSYBOX)
+ 	install -m 644 $(BUSYBOX)/AUTHORS AUTHORS.busybox
+ 	install -m 644 $(BUSYBOX)/LICENSE LICENSE.busybox
+@@ -141,7 +107,6 @@
+ 	mkdir -p $@/sysroot
+ 	ln -s bin $@/sbin
+ 	install -m 755 busybox $@/bin/
+-	install -m 755 udhcpc $@/bin/
+ 	install -m 755 wlanctl $@/bin/
+ 	ln -s busybox $@/bin/sh
+ 	ln -s busybox $@/bin/echo
+@@ -155,6 +120,7 @@
+ 	ln -s busybox $@/bin/umount
+ 	ln -s busybox $@/bin/[
+ 	ln -s busybox $@/bin/sleep
++	ln -s busybox $@/bin/udhcpc
+ 	ln -s busybox $@/bin/grep
+ 
+ 	install -m 755 linuxrc $@/linuxrc

@@ -1,0 +1,108 @@
+--- initrd/dhcpd.conf.etherboot.include.old	2003-12-19 14:18:06.000000000 +0100
++++ initrd/dhcpd.conf.etherboot.include	2003-12-19 14:18:17.000000000 +0100
+@@ -1,12 +1,13 @@
+ # dhcpd.conf include file for Etherboot
+ #
+ # Include this file from your /etc/dhcpd.conf
+-# $Id: dhcpd.conf.etherboot.include,v 1.12 2002/06/05 14:52:39 mcb30 Exp $
++# $Id: dhcpd.conf.etherboot.include,v 1.15 2003/11/10 14:45:05 mcb30 Exp $
+ 
+ # Definition of Etherboot options
+ # (taken from vendortags.html)
+ 
+-# We use an encapsulated option space to avoid polluting the site-local DHCP option space
++# We use an encapsulated option space to avoid polluting the
++# site-local DHCP option space
+ #
+ option space etherboot;
+ option etherboot-encapsulated-options code 150 = encapsulate etherboot;
+@@ -18,6 +19,7 @@
+ option etherboot.kernel-cmdline	code 129 = string;
+ option etherboot.menu-opts	code 160 = string;
+ option etherboot.nic-dev-id	code 175 = string;
++option etherboot.arch		code 177 = string;
+ option etherboot.menu-selection	code 176 = unsigned integer 8;
+ option etherboot.motd-1		code 184 = string;
+ option etherboot.motd-2		code 185 = string;
+@@ -45,8 +47,10 @@
+ option etherboot.image-16	code 207 = string;
+ option etherboot.kmod		code 254 = string;
+ 
+-# Legacy support for Etherboot options as site-local options (i.e. non-encapsulated)
+-# Note: options defined after the switch to encapsulated options should not be defined here
++# Legacy support for Etherboot options as site-local options
++# (i.e. non-encapsulated).
++# Note: options defined after the switch to encapsulated options
++# should not be defined here
+ #
+ option legacy-etherboot-magic		code 128 = string;
+ option legacy-etherboot-kernel-cmdline	code 129 = string;
+@@ -100,31 +104,30 @@
+   # "Sensible" default values for some options
+ 
+   # Mount devfs (will probably be needed for a network-boot)
+-  option etherboot.kernel-cmdline " devfs=mount";
++  option etherboot.kernel-cmdline " devfs=mount vga=788";
+ 
+   # Info message (includes client IP address, MAC address, hardware ID string,
+   # server IP address and name of boot file)
+-  option etherboot.motd-4 = concat ( "Using Etherboot to boot ",
+-				     binary-to-ascii ( 10, 8, ".", leased-address ),
+-				     " [",
+-				     binary-to-ascii ( 16, 8, ":", suffix ( hardware, 6 ) ),
+-				     "] [",
+-				     pick-first-value ( option etherboot.nic-dev-id, "unknown card" ),
+-				     "]", 0d:0a, "  from ",
+-				     binary-to-ascii ( 10, 8, ".", option dhcp-server-identifier ),
+-				     " with file ",
+-				     config-option tftp-server-name,
+-				     ":",
+-				     config-option bootfile-name,
+-				     " [",
+-				     pick-first-value ( config-option etherboot.kmod, "unknown module" ),
+-				     "]", 0d:0a );
++  option etherboot.motd-4 = concat ( "Booting ",
++     binary-to-ascii ( 10, 8, ".", leased-address ),
++     " [",
++     binary-to-ascii ( 16, 8, ":", suffix ( hardware, 6 ) ),
++     "] [",
++     pick-first-value (
++	concat ( binary-to-ascii ( 16, 8, ":", substring ( option etherboot.nic-dev-id, 0, 1 ) ), ":",
++		 binary-to-ascii ( 16, 16, ":", substring ( option etherboot.nic-dev-id, 1, 4 ) ) ),
++	"unknown card" ),
++     "] [",
++     pick-first-value ( config-option etherboot.kmod, "unknown module" ),
++     "]", 0d:0a );
+ 
+   # Legacy site-local option support
+-  # If client does not include an etherboot-encapsulated-options field in its DHCPREQUEST, then
+-  # it will not understand etherboot-encapsulated-options in the DHCPACK and so we must send
++  # If client does not include an etherboot-encapsulated-options field
++  # in its DHCPREQUEST, then it will not understand
++  # etherboot-encapsulated-options in the DHCPACK and so we must send
+   # back the options as site-local options (i.e. not encapsulated).
+-  # Note: we need do this only for options that existed prior to the switch to encapsulation.
++  # Note: we need do this only for options that existed prior to the
++  # switch to encapsulation.
+   #
+   if not exists etherboot-encapsulated-options {
+     option legacy-etherboot-magic	= config-option etherboot.magic;
+@@ -174,7 +177,7 @@
+   option root-path = concat ( config-option tftp-server-name, ":/" );
+ 
+   # A fallback hostname, generated from the IP address
+-  option host-name = concat ( "client_", binary-to-ascii ( 10, 8, "_", leased-address ) );
++  option host-name = concat ( "h_", binary-to-ascii ( 10, 8, "_", leased-address ) );
+ }
+ 
+ # Force some items onto parameter request list for udhcp
+@@ -205,3 +208,9 @@
+ 
+   }
+ }
++
++# PXE boot: chain into the Etherboot UNDI driver.
++# 
++if substring ( option vendor-class-identifier, 0, 9 ) = "PXEClient" {
++   filename "undi.zpxe";
++}

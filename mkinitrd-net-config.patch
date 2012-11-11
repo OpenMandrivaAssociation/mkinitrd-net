@@ -1,0 +1,10 @@
+--- initrd/busybox-1.01/applets/applets.c.config	2006-03-15 17:35:40.000000000 +0100
++++ initrd/busybox-1.01/applets/applets.c	2006-03-15 17:36:13.000000000 +0100
+@@ -37,6 +37,7 @@
+ #define MAKE_USAGE
+ #include "usage.h"
+ 
++#include "config.h"
+ #include "applets.h"
+ 
+ ;

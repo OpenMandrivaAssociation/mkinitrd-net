@@ -1,0 +1,274 @@
+--- initrd/udhcpc-post.unionfs	2002-06-05 15:09:31.000000000 +0200
++++ initrd/udhcpc-post	2006-03-16 14:36:01.000000000 +0100
+@@ -11,6 +11,8 @@
+     ifconfig $interface $ip $BROADCAST $NETMASK
+     route add default gw $router dev $interface
+     echo -n > /etc/resolv.conf
++    echo -n $serverid > /etc/SIP
++    echo -n $ip > /etc/IP	
+     for i in $dns; do
+       echo nameserver $i >> /etc/resolv.conf
+     done
+--- initrd/mkinitrd-net.unionfs	2006-03-16 14:36:01.000000000 +0100
++++ initrd/mkinitrd-net	2006-03-16 14:36:01.000000000 +0100
+@@ -44,6 +44,7 @@
+ include_modules=include-modules
+ initrd_skel=/usr/lib/mkinitrd-net/initrd-skel
+ kernel_ver=`uname -r`
++unionfs=n
+ use_sudo=y
+ keep=n
+ output_dir=/var/lib/tftpboot
+@@ -55,7 +56,7 @@
+   use_sudo=n
+ fi
+ 
+-USAGE="Usage: $0 [-k|--kernel <kernel_ver>] [-n|--nolink] [-q|--quiet] [-l|--local] [--nosudo] [--keep] [--help] module_list ..."
++USAGE="Usage: $0 [-k|--kernel <kernel_ver>] [-n|--nolink] [-q|--quiet] [-u|--unionfs] [-l|--local] [--nosudo] [--keep] [--help] module_list ..."
+ 
+ # Parse command-line options
+ while [ $# -gt 0 ]; do
+@@ -72,6 +73,8 @@
+     --n|--nolink)
+ 		shift ; make_link=n ;;
+     -q|--quiet) shift ; quiet=-q ;;
++    -u|--unionfs) 
++    		shift ; unionfs=y ;;
+     --help)	shift ; do_help=y ;;
+     --)		shift ; break ;;
+     -*)		echo "${0}: ${1}: invalid option" >&2
+@@ -97,6 +100,7 @@
+ if [ "$do_help" == "y" ]; then
+   echo $USAGE
+   echo "  -k, --kernel   Specify kernel version"
++  echo "  -u, --unionfs  Use unionfs over nfs"
+   echo "  -n, --nolink   Do not create a matching symbolic link"
+   echo "  -l, --local    Run locally from CVS (for developers only)"
+   echo "  --nosudo       Do not use sudo (i.e. must run as root instead)"
+@@ -131,6 +135,10 @@
+ 
+ # Copy skeleton into temporary area
+ cp -a $initrd_skel/* $initrd/
++rm -f $initrd/linuxrc-unionfs
++if [ "$unionfs" = "y" ]; then
++  cp -f $initrd_skel/linuxrc-unionfs $initrd/linuxrc
++fi
+ mkdir -p $initrd/lib/modules/$kernel_ver
+ $include_modules $quiet -k $kernel_ver -d $initrd/lib/modules/$kernel_ver $modules > $initrd/bin/insert-modules || exit 1
+ chmod 755 $initrd/bin/insert-modules
+@@ -141,7 +149,12 @@
+ fi
+ 	
+ # Create empty ext2fs image file
+-dd if=/dev/zero bs=1k of=$initrdimg count=$((`du -sk $initrd | cut -f1` * 7 / 6)) 2> /dev/null
++bcount=$((`du -sk $initrd | cut -f1` * 7 / 6))
++# pad it for unionfs decompress
++if [ "$unionfs" == "y" ]; then
++  bcount=$(($bcount + 300))
++fi
++dd if=/dev/zero bs=1k of=$initrdimg count=$bcount 2> /dev/null
+ /sbin/mke2fs -q -F $initrdimg 2> /dev/null
+ 
+ # Mount image file, copy files on, create /dev entries, display free space, umount
+--- initrd/linuxrc-unionfs.unionfs	2006-03-16 14:36:01.000000000 +0100
++++ initrd/linuxrc-unionfs	2006-03-16 14:36:45.000000000 +0100
+@@ -0,0 +1,123 @@
++#!/bin/sh
++
++PATH=/sbin:/bin
++
++echo Busybox /linuxrc starting
++
++echo Mounting /proc filesystem
++mount -t proc none /proc
++
++echo=echo
++if grep '\bquiet\b' /proc/cmdline > /dev/null; then
++  echo=true
++  quiet=1
++fi
++
++$echo Creating root device
++mknod /dev/root b 1 0 2>/dev/null
++chmod 700 /dev/root
++echo 0x100 > /proc/sys/kernel/real-root-dev
++
++$echo Inserting modules
++if [ -z "$quiet" ]; then
++  /bin/insert-modules
++else
++  /bin/insert-modules >/dev/null
++fi
++
++$echo Bringing up loopback interface
++ifconfig lo 127.0.0.1 up
++route add -net 127.0.0.0 netmask 255.0.0.0 lo
++
++# Hack required for prism2 cards
++# It is not yet possible to use iwconfig to configure these cards,
++# so we need wlanctl.
++if ifconfig wlan0 down 2> /dev/null; then
++  $echo Setting up wireless link
++  wlanctl wlan0 lnxreq_ifstate ifstate=enable
++  wlanctl wlan0 lnxreq_autojoin ssid= authtype=opensystem
++fi
++
++$echo Obtaining IP address via DHCP
++$echo Trying to obtain IP address via wired link [eth0]
++if udhcpc -i eth0 -f -n -q -s /bin/udhcpc-post; then
++  $echo Successfully obtained IP address via wired link [eth0]
++else
++  if udhcpc -i eth0 -f -n -q -s /bin/udhcpc-post; then
++     $echo Successfully obtained IP address via wired link [eth0]
++  else
++     if udhcpc -i eth0 -f -n -q -s /bin/udhcpc-post; then
++        $echo Successfully obtained IP address via wired link [eth0]
++     else
++        $echo Failed to obtain IP address via wired link [eth0]
++        $echo Trying to obtain IP address via wireless link [wlan0]
++        udhcpc -i wlan0 -f -n -q -s /bin/udhcpc-post
++     fi
++  fi
++fi
++
++if [ -d /sysroot/initrd ]; then
++  SIP=`cat etc/SIP`
++  $echo "SIP: $SIP"
++  IP=`cat etc/IP`
++  $echo "IP: $IP"
++  
++  $echo Unmounting /proc prior to pivot_root
++  umount /proc
++
++  # unionfs setup
++  if [ -d /sysroot/var/lib/terminal-server/common ]; then
++    # unionfs module is huge - makes initrd too big
++    $echo Inserting unionfs module from server root
++    zcat /sysroot/lib/modules/`uname -r`/kernel/fs/unionfs/unionfs.ko.gz > unionfs.ko
++    insmod unionfs.ko
++    $echo Remounting root directory to prepare for unionfs join
++    umount /sysroot > /dev/null 2>&1
++    mount -t nfs -o nolock,rsize=8192,wsize=8192 $SIP:/ /sysroot/root 
++    $echo Adding common nfs mount point
++    mount -t nfs -o nolock,rsize=8192,wsize=8192 $SIP:/var/lib/terminal-server/common /sysroot/common
++    if [ -d /sysroot/root/var/lib/terminal-server/clients/$IP ]; then
++      $echo Adding client specific nfs mount point for $IP
++      mount -t nfs -o nolock,rsize=8192,wsize=8192 $SIP:/var/lib/terminal-server/clients/$IP /sysroot/client
++      # start out ro - otherwise early boot writes stuff here and fastboot
++      # doesn't always show up
++      # change it rw in the terminal-server init script
++      # update - ro doesn't work, mount rw and use unionctl to change it
++      MYDIR="/sysroot/client:"
++      ROCLIENT="/usr/sbin/unionctl / --mode ro /initrd/sysroot/client"
++      $echo Combining root, common, client nfs mount points into unionfs root
++    else
++      MYDIR=""
++      ROCLIENT=""
++      $echo Combining root, common nfs mount points into unionfs root
++    fi
++    mount -t unionfs -odirs=$MYDIR/sysroot/common:/sysroot/root=ro unionfs /unionroot
++  fi
++
++  $echo Pivoting root to /unionroot
++  pivot_root /unionroot /unionroot/initrd
++  cd /
++  
++  # now change to ro - ugly hack since unionfs refuses to mount ro
++  $echo Remount base union branches ro
++  mount -t proc none /proc
++  $ROCLIENT
++  /usr/sbin/unionctl / --mode ro /initrd/sysroot/common
++  umount /proc
++  
++  mount -t tmpfs /dev /dev
++  mknod /dev/console c 5 1
++  mkdir /dev/pts
++  mount -t devpts none /dev/pts
++
++  $echo Mounting client init directories to mask server init
++  mount -t nfs -o nolock,rsize=8192,wsize=8192 $SIP:/var/lib/terminal-server/nfs/etc/rc.d/rc3.d /etc/rc.d/rc3.d
++  mount -t nfs -o nolock,rsize=8192,wsize=8192 $SIP:/var/lib/terminal-server/nfs/etc/rc.d/rc5.d /etc/rc.d/rc5.d
++else
++  # Failed to mount root: report error and hang
++  echo FATAL ERROR: Failed to mount root filesystem
++  echo Press Alt-SysRq-B or hit the reset switch to reboot
++  while : ; do sleep 6000 ; done
++fi
++
++
+--- initrd/Makefile.unionfs	2006-03-16 14:36:01.000000000 +0100
++++ initrd/Makefile	2006-03-16 14:36:01.000000000 +0100
+@@ -105,11 +105,17 @@
+ 	mkdir -p $@/lib/modules
+ 	mkdir -p $@/proc
+ 	mkdir -p $@/sysroot
++	mkdir -p $@/sysroot/root
++	mkdir -p $@/sysroot/common
++	mkdir -p $@/sysroot/client
++	mkdir -p $@/unionroot
+ 	ln -s bin $@/sbin
+ 	install -m 755 busybox $@/bin/
+ 	install -m 755 wlanctl $@/bin/
+ 	ln -s busybox $@/bin/sh
++	ln -s busybox $@/bin/cat
+ 	ln -s busybox $@/bin/echo
++	ln -s busybox $@/bin/mkdir
+ 	ln -s busybox $@/bin/mknod
+ 	ln -s busybox $@/bin/chmod
+ 	ln -s busybox $@/bin/insmod
+@@ -118,12 +124,15 @@
+ 	ln -s busybox $@/bin/mount
+ 	ln -s busybox $@/bin/pivot_root
+ 	ln -s busybox $@/bin/umount
++	ln -s busybox $@/bin/uname
+ 	ln -s busybox $@/bin/[
+ 	ln -s busybox $@/bin/sleep
+ 	ln -s busybox $@/bin/udhcpc
+ 	ln -s busybox $@/bin/grep
++	ln -s busybox $@/bin/zcat
+ 
+ 	install -m 755 linuxrc $@/linuxrc
++	install -m 755 linuxrc-unionfs $@/linuxrc-unionfs
+ 	install -m 755 udhcpc-post $@/bin/udhcpc-post
+ 
+ tftpboot/initrd-%.img : initrd-skel
+--- initrd/mknbi-set.unionfs	2006-03-16 14:36:01.000000000 +0100
++++ initrd/mknbi-set	2006-03-16 14:36:01.000000000 +0100
+@@ -97,9 +97,10 @@
+ my $kernel = '';
+ my @kernels = ();
+ my $mcount = '';
++my $unionfs = '';
+ our $module_count = 0;
+ 
+-my $usage="Usage: $0 [-l|--local] [-q] [-v] [-r|--refresh module[,module...]] [--help]";
++my $usage="Usage: $0 [-l|--local] [-q] [-v] [-u|--unionfs] [[-r|--refresh module[,module...]] [--help]";
+ 
+ # Parse command-line options
+ while ( $_ = shift ) {
+@@ -124,12 +125,15 @@
+ 	"  -c, --count    Count NBIs for a particular kernel\n".
+ 	"  -k, --kernel   Build NBIs for a particular kernel\n".
+         "  -l, --local    Run locally from CVS (for developers only)\n".
++        "  -u, --unionfs  Build for unionfs over nfs\n".
+ 	"  -r, --refresh  Refresh NBI for a particular module\n".
+ 	"  -v, --verbose  Be more verbose\n".
+ 	"  -q, --quiet    Be less verbose\n";
+   } elsif ( /-c|--count/ ) {
+     $mcount = 1;
+     $verbosity = 0;
++  } elsif ( /-u|--unionfs/ ) {
++    $unionfs = 1;
+   } else {
+     die "$usage\n";
+   }
+@@ -210,7 +214,8 @@
+ 	  ( $use_local ? "--local " : "" ).
+ 	      ( $kernel_ver ? "--kernel $kernel_ver " : "" ).
+ 		  ( $verbosity >= 2 ? "" : "-q " ).
+-		      $moduleset_spaces;
++		      ( $unionfs ? "--unionfs " : "" ).
++		          $moduleset_spaces;
+       print "$initrd_cmd\n" if $verbosity >= 3;
+       if ( system ( $initrd_cmd ) == 0 ) {
+ 	my $mknbi_cmd = "$mknbi $kernel $output_dir/initrd-$output_id.img > $output_dir/boot-$output_id.nbi";

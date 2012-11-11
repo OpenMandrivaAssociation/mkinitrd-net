@@ -1,0 +1,76 @@
+--- initrd/mknbi-1.4.3/mknbi.pl.count	2005-05-05 17:22:10.212970583 +0200
++++ initrd/mknbi-1.4.3/mknbi.pl	2005-05-05 17:23:25.476288194 +0200
+@@ -597,7 +597,7 @@
+ if ($format eq 'nbi') {
+ 	$first32 = '' if !defined($first32);
+ 	if ($target ne 'rom' and $target ne 'dos' and $target ne 'fdos') {
+-		print STDERR "mkelf-$target is preferred in future instead of mknbi-$target\n";
++		# print STDERR "mkelf-$target is preferred in future instead of mknbi-$target\n";
+ 	}
+ 	$module = Nbi->new($libdir);
+ } elsif ($format eq 'elf') {
+--- initrd/mknbi-set.count	2005-05-05 17:20:58.375713497 +0200
++++ initrd/mknbi-set	2005-05-05 17:26:13.982240215 +0200
+@@ -5,7 +5,7 @@
+ # Network card module sets are taken from /etc/mknbi-set.conf
+ 
+ use strict;
+-use vars qw($verbosity);
++use vars qw($verbosity $module_count);
+ 
+ use constant EB_PCI_DEVICE => 1;
+ 
+@@ -56,6 +56,7 @@
+ 	foreach ( `nm $tempmodule` ) {
+ 	  chomp;
+ 	  $modulesets->{$module} = 1 if /(ether|wlan)/ ;
++	  $module_count++ if /(ether|wlan)/ ;
+ 	}
+ 	unlink $tempmodule;
+       } else {
+@@ -95,6 +96,8 @@
+ my $modulesets = {};
+ my $kernel = '';
+ my @kernels = ();
++my $mcount = '';
++our $module_count = 0;
+ 
+ my $usage="Usage: $0 [-l|--local] [-q] [-v] [-r|--refresh module[,module...]] [--help]";
+ 
+@@ -118,11 +121,15 @@
+     $verbosity--;
+   } elsif ( /--help/ ) {
+     die "$usage\n".
++	"  -c, --count    Count NBIs for a particular kernel\n".
+ 	"  -k, --kernel   Build NBIs for a particular kernel\n".
+         "  -l, --local    Run locally from CVS (for developers only)\n".
+ 	"  -r, --refresh  Refresh NBI for a particular module\n".
+ 	"  -v, --verbose  Be more verbose\n".
+ 	"  -q, --quiet    Be less verbose\n";
++  } elsif ( /-c|--count/ ) {
++    $mcount = 1;
++    $verbosity = 0;
+   } else {
+     die "$usage\n";
+   }
+@@ -140,6 +147,8 @@
+ $mkinitrd_net .= " --kernel $kernel_ver";
+ print "mknbi: $mknbi\n" if $verbosity >= 1;
+ 
++$dhcpfile = "/dev/null" if ($mcount);
++
+ # If modules have been specified via --refresh, do not scan for modules or rewrite the
+ # dhcpd.conf fragment file
+ unless ( %$modulesets ) {
+@@ -171,6 +180,11 @@
+   close $dhcpfh;
+ }
+ 
++if ($mcount) {
++  print "$module_count\n";
++  exit 0;
++}
++
+ # Build initrd and nbi for each kernel-moduleset combination
+ foreach my $moduleset ( sort keys %$modulesets ) {
+   next unless $modulesets->{$moduleset}; # Ignore if value is 0

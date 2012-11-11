@@ -1,0 +1,151 @@
+--- initrd/mknbi-set.26	2005-01-21 19:45:38.369598192 +0100
++++ initrd/mknbi-set	2005-01-21 19:45:38.373598313 +0100
+@@ -22,12 +22,14 @@
+ 
+ # Utility function: read modules.pcimap-style file
+ # Add modules to modulesets hash, write out dhcpd.conf fragment
+-sub read_config_file ($$$$) {
++sub read_config_file ($$$$$) {
+   my $configfile = shift;
+   my $modulesets = shift;
+   my $dhcpfh = shift;
++  my $kernel_ver = shift;
+   my $alwaysuse = shift;
+-
++  my @modulepaths;
++  
+   print "Scanning through $configfile for network modules...\n" if $verbosity >= 1;
+   open CF, $configfile or die "Could not open $configfile: $!\n";
+   chomp ( my $tempmodule = `mktemp /tmp/mknbi-set.XXXXXX` );
+@@ -41,10 +43,11 @@
+     if ( ! exists $modulesets->{$module} ) {
+       # Check to see if module is a network module
+       # Only do this the first time we encounter a module
+-      my @modulepaths = `/sbin/modprobe -l $module.o*` ;
++      @modulepaths = `find /lib/modules/$kernel_ver -name '$module.*'`;      
+       chomp ( my $modulepath = $modulepaths[0] );
+       if ( $modulepath ) {
+-	if ( $modulepath =~ /.o.gz$/ ) {
++	      chomp $modulepath;
++	if ( $modulepath =~ /o.gz$/ ) {
+ 	  system ( "zcat $modulepath > $tempmodule" );
+ 	} else {
+ 	  system ( "cp $modulepath $tempmodule" );
+@@ -79,7 +82,8 @@
+ 
+ my $conffile = '/etc/mknbi-set.conf';
+ my $mkinitrd_net = 'mkinitrd-net';
+-my $mknbi = 'mknbi-linux --append=devfs=mount';
++my $mknbi = 'mknbi-linux';
++$mknbi .= ' --append=devfs=mount' if `/sbin/pidof -s devfsd` gt 0;
+ my $output_dir = '/var/lib/tftpboot';
+ my $dhcpfile = '/etc/dhcpd.conf.etherboot-pcimap.include';
+ my $use_local;
+@@ -124,10 +128,14 @@
+ if ($kernel) {
+   @kernels = ( $kernel );
+ } else {
+-  @kernels = glob('/boot/vmlinuz*');
++  die "kernel argument required...\n";
+ }
+ die "Could not find any kernels in /boot\n" unless @kernels;
+ 
++my ($kernel_ver) = ( $kernel =~ /vmlinuz-(.*)$/ );
++$mkinitrd_net .= " --kernel $kernel_ver";
++print "mknbi: $mknbi\n" if $verbosity >= 1;
++
+ # If modules have been specified via --refresh, do not scan for modules or rewrite the
+ # dhcpd.conf fragment file
+ unless ( %$modulesets ) {
+@@ -145,14 +153,12 @@
+ 
+   # Get set of network modules to build NBIs for
+   # Read explicitly-specified module sets from $conffile
+-  read_config_file($conffile, $modulesets, $dhcpfh, 1);
++  read_config_file($conffile, $modulesets, $dhcpfh, undef, 1);
+   # Obtain list of all network modules from pcimap file
+   my $pcimap;
+-  foreach ( `/sbin/modprobe -c` ) {
+-    $pcimap = $1 if /^pcimap.*?=(.*)$/;
+-  }
++  $pcimap = "/lib/modules/$kernel_ver/modules.pcimap";
+   if ( $pcimap ) {
+-    read_config_file($pcimap, $modulesets, $dhcpfh, 0);
++    read_config_file($pcimap, $modulesets, $dhcpfh, $kernel_ver, 0);
+   } else {
+     print STDERR "Could not identify pcimap file\n";
+   }
+--- initrd/include-modules.26	2002-05-26 11:10:59.000000000 +0200
++++ initrd/include-modules	2005-01-21 19:46:07.353378206 +0100
+@@ -30,34 +30,58 @@
+ # Use modprobe -nav to retrieve locations of modules and their dependencies
+ print STDERR "Requested modules ". join (' ', @requested_modules)."\n" unless $quiet;
+ my @modules_dups;
++my @module_list;
+ foreach my $module ( @requested_modules ) {
+-  my @module_list = map { /^\S+\s+(.*)$/ ; $1 } `/sbin/modprobe -nva $module`;
++  @module_list = map { /^\S+\s+(.*)$/ ; $1 } `/sbin/modprobe -nva $module | grep ^insmod`;
++  # some modules (like af_packet), don't respond to -nva under 2.6 kernel
++  # some modules also have name mismatches between 2.4 and 2.6 kernels
++  # try to grab it with find, although we may have issues with dependencies
++  @module_list = `find /lib/modules/$kernel_ver -name '$module.*'` unless @module_list;
+   die "Cannot find any modules matching $module\n" unless @module_list;
+-  push @modules_dups, @module_list;
++  # still get some empty results that generate errors later
++  push @modules_dups, @module_list if @module_list;
+ }
+ 
+ # Remove duplicates from list
+ my %module_basenames = ();
+ my @modules = ();
++my @mod_basenames = ();
+ foreach my $module ( @modules_dups ) {
+   # Ugly hack : assume that dependencies are independent of kernel version
+   # This seems to be necessary because we can't run modprobe and specify
+   # an alternate modules.dep file; it refuses to understand lines of the 
+   # form "depfile=XXX" as documented in modules.conf(5)
+-  $module =~ s/$current_kernel_ver/$kernel_ver/ if $kernel_ver;
+-  push @modules, $module unless $module_basenames{$module};
+-  ( my $basename ) = ( $module =~ /([^\/]+)\.o/ ); 
+-  $module_basenames{$module} = $basename;
++  # (sb) if the module was found with "find" this isn't needed  
++  if ($module !~ /$kernel_ver/) {
++    $module =~ s/.ko.gz/.o.gz/ if ($current_kernel_ver =~ /2.6/ && $kernel_ver =~ /2.4/);
++    $module =~ s/.o.gz/.ko.gz/ if ($current_kernel_ver =~ /2.4/ && $kernel_ver =~ /2.6/); 
++  }
++  my $basename;
++  if ($kernel_ver =~ /2.6/) {  
++    ($basename) = ( $module =~ /([^\/]+)\.ko/ ); 
++  } else {
++    ($basename) = ( $module =~ /([^\/]+)\.o/ );   
++  }
++  push @mod_basenames, $basename if ! grep { /$basename$/ } @mod_basenames;
+ }
+ 
+ # Process module list
+ print "#!/bin/sh\n";
+-foreach my $module ( @modules ) {
+-  my $basename = $module_basenames{$module};
++foreach my $basename ( @mod_basenames ) {
++  my $module = `find /lib/modules/$kernel_ver -name '$basename.*'`;
++  chomp $module;
+   # Report via stdout
+-  print STDERR "Using module $basename from $module\n" unless $quiet;
+-  # Copy uncompressed module to current directory
+-  system ("gunzip -c $module > $basename.o");
+-  # Print insmod line to stdout
+-  print "insmod $basename\n";
++  if ($module) {
++    print STDERR "Using module $basename from $module\n" unless $quiet;
++    # Copy uncompressed module to current directory
++    if ($kernel_ver =~ /2.6/) {
++      system ("gunzip -c $module > $basename.ko");
++      # Print insmod line to stdout
++      print "insmod /lib/modules/$kernel_ver/$basename.ko\n";
++    } else {
++      system ("gunzip -c $module > $basename.o");
++      # Print insmod line to stdout
++      print "insmod $basename\n"; 
++    }
++  }
+ }

@@ -1,0 +1,11 @@
+--- initrd/mknbi-1.4.3/nfl.c.gcc4	2003-09-22 16:47:08.000000000 +0200
++++ initrd/mknbi-1.4.3/nfl.c	2005-08-30 20:00:20.000000000 +0200
+@@ -124,7 +124,7 @@
+ static unsigned short menu_cols = 0x0800;
+ 
+ /* Terminal types.  */
+-static int terminal = TERMINAL_CONSOLE;
++int terminal = TERMINAL_CONSOLE;
+ 
+ /* Defined in ANSI.C */
+ extern unsigned short rows, columns, attr;

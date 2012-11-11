@@ -1,0 +1,23 @@
+--- initrd/linuxrc.nic	2004-02-06 22:38:33.290033109 +0100
++++ initrd/linuxrc	2004-02-06 22:39:26.668840290 +0100
+@@ -44,9 +44,17 @@
+ if udhcpc -i eth0 -f -n -q -s /bin/udhcpc-post; then
+   $echo Successfully obtained IP address via wired link [eth0]
+ else
+-  $echo Failed to obtain IP address via wired link [eth0]
+-  $echo Trying to obtain IP address via wireless link [wlan0]
+-  udhcpc -i wlan0 -f -n -q -s /bin/udhcpc-post
++  if udhcpc -i eth0 -f -n -q -s /bin/udhcpc-post; then
++     $echo Successfully obtained IP address via wired link [eth0]
++  else
++     if udhcpc -i eth0 -f -n -q -s /bin/udhcpc-post; then
++        $echo Successfully obtained IP address via wired link [eth0]
++     else
++        $echo Failed to obtain IP address via wired link [eth0]
++        $echo Trying to obtain IP address via wireless link [wlan0]
++        udhcpc -i wlan0 -f -n -q -s /bin/udhcpc-post
++     fi
++  fi
+ fi
+ 
+ if [ -d /sysroot/initrd ]; then
