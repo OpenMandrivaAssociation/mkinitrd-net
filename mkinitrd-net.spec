@@ -40,7 +40,7 @@ Patch22: mkinitrd-net-fix-uclibc-build-with-system-headers.patch
 
 License: GPL/LGPL/MPL
 Group: System/Kernel and hardware
-URL: http://www.fensystems.co.uk/SRPMS.fensys
+URL: https://www.fensystems.co.uk/SRPMS.fensys
 BuildRoot: %{_tmppath}/%{name}-buildroot
 Requires: tftp-server binutils
 BuildRequires: glibc-static-devel
