@@ -43,6 +43,7 @@ Group: System/Kernel and hardware
 URL: https://www.fensystems.co.uk/SRPMS.fensys
 BuildRoot: %{_tmppath}/%{name}-buildroot
 Requires: tftp-server binutils
+BuildRequires:	make
 BuildRequires: glibc-static-devel
 BuildRequires: kernel-source-latest
 Obsoletes: mknbi
